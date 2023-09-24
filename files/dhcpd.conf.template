@@ -1,0 +1,15 @@
+# Basic configuration
+authoritative;
+ddns-update-style none;
+default-lease-time 300;
+max-lease-time 7200;
+
+# Define subnet
+subnet ${SUBNET} netmask ${NETMASK} {
+    option subnet-mask ${NETMASK};
+    option routers ${GATEWAY};
+    range ${DHCP};
+}
+
+# Define persistent hosts
+${HOSTS}

@@ -1,0 +1,31 @@
+services:
+  iotsolator:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    privileged: true
+    network_mode: host
+    volumes:
+      # Retain DHCP leases
+      - ./state:/var/dhcpd:rw
+    environment:
+      # The WLAN interface to use
+      INTERFACE: wlan0
+      
+      # WLAN configuration 
+      COUNTRY: DE
+      CHANNEL: 1
+      SSID: IoTsolated
+      PASSPHRASE: verylongandsecurepassword-guaranteed!!11elf # FIXME
+      #SECURITY: LEGACY
+
+      # Network configuration
+      SUBNET: "192.168.2.0" 
+      GATEWAY: "192.168.2.1" 
+      NETMASK: "255.255.255.0"
+      DHCP: 192.168.2.10 192.168.2.99
+      HOSTS: >
+        host cafedeadbeef {
+            hardware ethernet ca:fe:de:ad:be:ef;
+            fixed-address 192.168.2.101;
+        }
