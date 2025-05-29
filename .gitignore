@@ -3,3 +3,15 @@
 
 # Ignore state
 state/
+
+# Ignore build results
+/supervisor/Cargo.lock
+/supervisor/target
+
+# Ignore some vscode files
+.vscode/*
+!.vscode/*.md
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+!.vscode/settings.json

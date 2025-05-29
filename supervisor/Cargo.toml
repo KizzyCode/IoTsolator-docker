@@ -1,0 +1,29 @@
+[package]
+name = "supervisor"
+version = "0.1.0"
+edition = "2024"
+authors = ["KizzyCode Software Labs./Keziah Biermann <development@kizzycode.de>"]
+keywords = []
+categories = []
+description = "Supervisor process to bootstrap and watch hostapd+dhcpd"
+license = "BSD-2-Clause OR MIT"
+repository = "https://github.com/KizzyCode/IoTsolator-docker"
+readme = "README.md"
+
+
+[features]
+default = []
+
+
+[dependencies]
+libc = { version = "0.2.172", default-features = false, features = ["std"] }
+regex = { version = "1.11.1", default-features = false, features = ["std", "unicode"] }
+
+[dev-dependencies]
+
+
+[profile.release]
+overflow-checks = true
+
+[profile.bench]
+overflow-checks = true

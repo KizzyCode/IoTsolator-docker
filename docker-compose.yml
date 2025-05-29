@@ -1,31 +1,51 @@
 services:
   iotsolator:
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    build: .
     privileged: true
     network_mode: host
     volumes:
       # Retain DHCP leases
       - ./state:/var/dhcpd:rw
     environment:
-      # The WLAN interface to use
-      INTERFACE: wlan0
-      
-      # WLAN configuration 
-      COUNTRY: DE
-      CHANNEL: 1
-      SSID: IoTsolated
-      PASSPHRASE: verylongandsecurepassword-guaranteed!!11elf # FIXME
-      #SECURITY: LEGACY
+      # hostapd config file
+      CONFIGFILE_HOSTAPD: |
+        #TARGET:/etc/hostapd.conf
+        # Logging config
+        logger_syslog=0
+        logger_syslog_level=2
+        logger_stdout=-1
+        logger_stdout_level=0
 
-      # Network configuration
-      SUBNET: "192.168.2.0" 
-      GATEWAY: "192.168.2.1" 
-      NETMASK: "255.255.255.0"
-      DHCP: 192.168.2.10 192.168.2.99
-      HOSTS: >
-        host cafedeadbeef {
-            hardware ethernet ca:fe:de:ad:be:ef;
-            fixed-address 192.168.2.101;
+        # Basic interface config
+        interface=wlan0
+        country_code=DE
+        hw_mode=g
+        ieee80211n=1
+        ieee80211d=1
+        channel=5
+
+        # Network 0
+        ssid=iotsolator-network0
+        auth_algs=1
+        wpa=2
+        wpa_key_mgmt=WPA-PSK
+        rsn_pairwise=CCMP
+        ieee80211w=1
+        wpa_passphrase=verylongandsecurepassword-guaranteed!!11elf
+        ap_isolate=1
+
+      # dhcpd config file
+      CONFIGFILE_DHCPD: |
+        #TARGET:/etc/dhcpd.conf
+        # Basic configuration
+        authoritative;
+        ddns-update-style none;
+        default-lease-time 300;
+        max-lease-time 7200;
+
+        # Define subnet
+        subnet 192.168.2.0 netmask 255.255.255.0 {
+            option subnet-mask 255.255.255.0;
+            option routers 192.168.2.1;
+            range 192.168.2.10 192.168.2.99;
         }
