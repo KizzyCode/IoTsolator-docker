@@ -1,6 +1,6 @@
 [package]
 name = "supervisor"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors = ["KizzyCode Software Labs./Keziah Biermann <development@kizzycode.de>"]
 keywords = []
@@ -17,7 +17,6 @@ default = []
 
 [dependencies]
 libc = { version = "0.2.172", default-features = false, features = ["std"] }
-regex = { version = "1.11.1", default-features = false, features = ["std", "unicode"] }
 
 [dev-dependencies]
 

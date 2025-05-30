@@ -18,7 +18,7 @@ RUN /home/buildenv/.cargo/bin/cargo install --path=/home/buildenv/supervisor
 
 FROM debian:stable-slim
 
-ENV APT_PACKAGES hostapd isc-dhcp-server net-tools
+ENV APT_PACKAGES hostapd isc-dhcp-server ifupdown
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get upgrade --yes \
@@ -26,5 +26,9 @@ RUN apt-get update \
     && apt-get clean
 
 COPY --from=buildenv /home/buildenv/.cargo/bin/supervisor /usr/local/sbin/supervisor
+
+RUN find /etc/network/ -type f -exec rm {} \;
+RUN mkdir -p /var/lib/dhcp \
+    && touch /var/lib/dhcp/dhcpd.leases
 
 CMD [ "/usr/local/sbin/supervisor" ]

@@ -1,18 +1,18 @@
 services:
   iotsolator:
     build: .
-    privileged: true
     network_mode: host
-    volumes:
-      # Retain DHCP leases
-      - ./state:/var/dhcpd:rw
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/rfkill:/dev/rfkill:rw
     environment:
       # hostapd config file
       CONFIGFILE_HOSTAPD: |
         #TARGET:/etc/hostapd.conf
         # Logging config
         logger_syslog=0
-        logger_syslog_level=2
+        logger_syslog_level=0
         logger_stdout=-1
         logger_stdout_level=0
 
@@ -24,8 +24,8 @@ services:
         ieee80211d=1
         channel=5
 
-        # Network 0
-        ssid=iotsolator-network0
+        # Indoor Tasmota Network
+        ssid=IndoorTasmotaNetwork
         auth_algs=1
         wpa=2
         wpa_key_mgmt=WPA-PSK
@@ -33,6 +33,32 @@ services:
         ieee80211w=1
         wpa_passphrase=verylongandsecurepassword-guaranteed!!11elf
         ap_isolate=1
+
+        # Outdoor Network
+        bss=wlan1
+        ssid=OutdoorNetwork
+        auth_algs=1
+        wpa=2
+        wpa_key_mgmt=WPA-PSK
+        rsn_pairwise=CCMP
+        ieee80211w=1
+        wpa_passphrase=anotherverylongandsecurepassword-trustmebro!!11zwölf
+        ap_isolate=1
+
+      # ifup/ifdown config file
+      CONFIGFILE_IFUPDOWN: |
+        #TARGET:/etc/network/interfaces
+        # Indoor Tasmota Network
+        auto wlan0
+        iface wlan0 inet static
+          pre-up ip addr flush dev wlan0
+          address 192.168.2.1/24
+        
+        # Outdoor Network
+        auto wlan1
+        iface wlan1 inet static
+          pre-up ip addr flush dev wlan1
+          address 192.168.3.1/24
 
       # dhcpd config file
       CONFIGFILE_DHCPD: |
@@ -43,9 +69,16 @@ services:
         default-lease-time 300;
         max-lease-time 7200;
 
-        # Define subnet
+        # Indoor Tasmota Network
         subnet 192.168.2.0 netmask 255.255.255.0 {
             option subnet-mask 255.255.255.0;
             option routers 192.168.2.1;
             range 192.168.2.10 192.168.2.99;
+        }
+
+        # Outdoor Network
+        subnet 192.168.3.0 netmask 255.255.255.0 {
+            option subnet-mask 255.255.255.0;
+            option routers 192.168.3.1;
+            range 192.168.3.10 192.168.3.99;
         }

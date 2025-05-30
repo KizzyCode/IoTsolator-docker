@@ -18,47 +18,50 @@
 compile_error!("application is unix only");
 
 mod config;
-mod services;
-mod supervisor;
+mod watchdog;
 
-use crate::config::ConfigFiles;
-use crate::services::{Hostapd, Ifconfig};
-use crate::supervisor::PanicWatchdog;
-use services::Dhcpd;
+use crate::watchdog::Watchdog;
+use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
 pub fn main() {
-    // Setup config files from environment
-    let config = ConfigFiles::from_env();
+    /// Grace-period to give a service some time to setup their business
+    const SETUP_GRACEPERIOD: Duration = Duration::from_secs(5);
+    /// Grace-period to wait for the child processes after SIGTERM
+    const TEARDOWN_GRACEPERIOD: Duration = Duration::from_secs(2);
 
-    // Spawn child processes
-    let watchdog = PanicWatchdog::start();
-    let interface = Ifconfig::init(&config);
-    let dhcpd = Dhcpd::init(&config);
-    let hostapd = Hostapd::init(&config);
+    // Spawn watchdog and deploy config
+    Watchdog::scope(
+        // Main logic under watchdog supervision
+        |watchdog| {
+            // Deploy config
+            config::deploy_from_env();
 
-    // Create watch-thread for each daemon
-    thread::spawn({
-        // Raise a watchdog alert if the process exits
-        let dhcpd = dhcpd.clone();
-        move || dhcpd.expect_never()
-    });
-    thread::spawn({
-        // Raise a watchdog alert if the process exits
-        let hostapd = hostapd.clone();
-        move || hostapd.expect_never()
-    });
+            // Spawn hostapd and specify the config file
+            watchdog.spawn_child("hostapd", ["/etc/hostapd.conf"], None);
+            thread::sleep(SETUP_GRACEPERIOD);
 
-    // Spin until we get an alert
-    while !watchdog.has_alert() {
-        /// Spin interval to avoid a tight loop
-        const SPIN_INTERVAL: Duration = Duration::from_millis(333);
-        thread::sleep(SPIN_INTERVAL);
-    }
+            // Spawn ifup in verbose mode to bring up all interfaces
+            watchdog.spawn_child("ifup", ["-v", "-a"], Some(0));
+            thread::sleep(SETUP_GRACEPERIOD);
 
-    // Tear down everything
-    hostapd.kill();
-    dhcpd.kill();
-    interface.kill();
+            // Spawn dhcpd, keep it in foreground, and specify the config file
+            watchdog.spawn_child("dhcpd", ["-d", "-cf", "/etc/dhcpd.conf"], None);
+        },
+        // On-alert handler to shutdown application
+        || {
+            // Send sigterm to our own process group to kill the childs
+            // Note: We catch SIGTERM, so this doesn't kill ourselves
+            unsafe { libc::kill(0, libc::SIGTERM) };
+            thread::sleep(TEARDOWN_GRACEPERIOD);
+
+            // Configure ifup in verbose mode to bring sown all interfaces...
+            Command::new("ifdown").args(["-v", "-s"])
+                // ... and spawn process synchronously...
+                .spawn().expect("failed to spawn ifdown")
+                // ...and wait until ifdown completes or we are terminated
+                .wait().expect("failed to teardown interfaces");
+        },
+    );
 }
