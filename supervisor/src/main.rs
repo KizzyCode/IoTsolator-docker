@@ -31,7 +31,7 @@ pub fn main() {
     /// Grace-period to wait for the child processes after SIGTERM
     const TEARDOWN_GRACEPERIOD: Duration = Duration::from_secs(2);
 
-    // Spawn watchdog and deploy config
+    // Handle panics and signals
     Watchdog::scope(
         // Main logic under watchdog supervision
         |watchdog| {
@@ -56,11 +56,11 @@ pub fn main() {
             unsafe { libc::kill(0, libc::SIGTERM) };
             thread::sleep(TEARDOWN_GRACEPERIOD);
 
-            // Configure ifup in verbose mode to bring sown all interfaces...
+            // Configure ifdown in verbose mode to bring sown all interfaces...
             Command::new("ifdown").args(["-v", "-s"])
                 // ... and spawn process synchronously...
                 .spawn().expect("failed to spawn ifdown")
-                // ...and wait until ifdown completes or we are terminated
+                // ...and wait until ifdown completes
                 .wait().expect("failed to teardown interfaces");
         },
     );

@@ -1,4 +1,4 @@
-//! A supervised process
+//! Watchdog for panics, signals and child processes
 
 use libc::c_int;
 use std::ffi::OsStr;
